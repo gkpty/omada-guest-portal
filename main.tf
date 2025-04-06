@@ -17,11 +17,34 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "vercel_team_id" {
+  type = string
+}
+
 variable "env" {
   type        = string
   description = "Environment tag (dev, staging, prod, etc.)"
-  default     = "dev"
+  default     = "production"
 }
+
+variable "project_name" {
+  type        = string
+  default     = "mansa-wifi-portal"
+}
+
+variable "project_repo" {
+  type        = string
+  default     = "gkpty/omada-guest-portal"
+}
+
+variable "omada_controller_url" {
+	type = string
+}
+
+variable "omada_portal_secret" {
+	type = string
+}
+
 
 provider "aws" {
   region = var.aws_region
@@ -70,6 +93,32 @@ resource "aws_iam_policy" "app_policy" {
 resource "aws_iam_user_policy_attachment" "app_user_attach" {
   user       = aws_iam_user.app_user.name
   policy_arn = aws_iam_policy.app_policy.arn
+}
+
+resource "vercel_project" "main" {
+  name            = var.project_name
+  framework       = "nextjs"
+  git_repository  = {
+    type = "github"
+    repo = var.project_repo
+  }
+  build_command = "npm run build"
+
+  environment = [
+    {
+      target = ["preview", "production"]
+			key   = "NODE_ENV"
+      value = "production"
+    },
+
+    
+  ]
+}
+
+resource "vercel_deployment" "main" {
+  project_id = vercel_project.main.id
+  ref        = "main"
+  production = false
 }
 
 # Outputs
