@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: mansa-wifi-dynamodb-local
+    ports:
+      - "8000:8000"
+    environment:
+      - JAVA_OPTS=-Duser.timezone=UTC
+    volumes:
+      - ./dynamodb_data:/home/dynamodblocal/data
+    command: -jar DynamoDBLocal.jar -sharedDb

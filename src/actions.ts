@@ -1,0 +1,80 @@
+'use server';
+
+import { PutItemCommand } from '@aws-sdk/client-dynamodb';
+import crypto from 'crypto';
+import { redirect } from 'next/navigation';
+import { v4 as uuidv4 } from 'uuid';
+import { documentClient } from './dynamoClient';
+
+const TABLE_NAME = 'mansa-wifi-guests';
+const PORTAL_SECRET = process.env.OMADA_PORTAL_SECRET!;
+const OMADA_CONTROLLER_URL = process.env.OMADA_CONTROLLER_URL!;
+
+interface SubmitFormData {
+  name: string;
+  contact: string;
+  clientMac: string;
+  apMac: string;
+  redirectUrl?: string;
+}
+
+function isEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isPhone(value: string) {
+  const cleaned = value.replace(/[^\d]/g, '');
+  const validFormat = /^[\d\s()+-]+$/.test(value);
+  return validFormat && cleaned.length >= 5 && cleaned.length <= 15;
+}
+
+export async function submitForm({
+  name,
+  contact,
+  clientMac,
+  apMac,
+  redirectUrl,
+}: SubmitFormData) {
+  if (!name || !contact) {
+    throw new Error('Missing required fields.');
+  }
+
+  const id = uuidv4();
+  const timestamp = new Date().toISOString();
+
+  const item: Record<string, { S: string }> = {
+    id: { S: id },
+    name: { S: name },
+    clientMac: { S: clientMac },
+    apMac: { S: apMac },
+    timestamp: { S: timestamp },
+  };
+
+  if (isEmail(contact)) {
+    item.email = { S: contact.trim() };
+  } else if (isPhone(contact)) {
+    const normalizedPhone = contact.replace(/[^\d]/g, '');
+    item.phone = { S: contact.trim() };
+    item.phoneNormalized = { S: normalizedPhone };
+  } else {
+    throw new Error('Invalid email or phone format.');
+  }
+
+  await documentClient.send(
+    new PutItemCommand({
+      TableName: TABLE_NAME,
+      Item: item,
+    })
+  );
+
+  const token = crypto
+    .createHmac('sha256', PORTAL_SECRET)
+    .update(clientMac.replace(/:/g, '') + apMac.replace(/:/g, ''))
+    .digest('hex');
+
+  const omadaRedirect = `${OMADA_CONTROLLER_URL}?token=${token}`;
+
+  redirect("https://google.com");
+  // redirect(redirectUrl || omadaRedirect);
+  
+}
