@@ -1,13 +1,11 @@
 'use server';
 
 import { PutItemCommand } from '@aws-sdk/client-dynamodb';
-import crypto from 'crypto';
 import { redirect } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import { documentClient } from './dynamoClient';
 
 const TABLE_NAME = 'mansa-wifi-guests';
-const PORTAL_SECRET = process.env.OMADA_PORTAL_SECRET!;
 const OMADA_CONTROLLER_URL = process.env.OMADA_CONTROLLER_URL!;
 
 interface SubmitFormData {
@@ -33,7 +31,7 @@ export async function submitForm({
   contact,
   clientMac,
   apMac,
-  // redirectUrl,
+  redirectUrl,
 }: SubmitFormData) {
   if (!name || !contact) {
     throw new Error('Missing required fields.');
@@ -67,13 +65,14 @@ export async function submitForm({
     })
   );
 
-  const token = crypto
-    .createHmac('sha256', PORTAL_SECRET)
-    .update(clientMac.replace(/:/g, '') + apMac.replace(/:/g, ''))
-    .digest('hex');
+  // ✅ Build Omada token by just concatenating MACs (no colons)
+  const clientPart = clientMac.replace(/:/g, '');
+  const apPart = apMac.replace(/:/g, '');
+  const token = `${clientPart}${apPart}`;
 
-  const omadaRedirect = `${OMADA_CONTROLLER_URL}?token=${token}`;
+  // ✅ Redirect to Omada controller's /portal/auth with the token
+  const omadaRedirect = `${OMADA_CONTROLLER_URL}/portal/auth?token=${token}`;
   console.log('Redirecting to:', omadaRedirect);
-  // redirect(redirectUrl || omadaRedirect);
-  redirect("https://google.com");
+
+  redirect(redirectUrl || omadaRedirect);
 }

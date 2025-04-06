@@ -200,7 +200,6 @@ resource "vercel_project" "main" {
 resource "vercel_deployment" "main" {
   project_id = vercel_project.main.id
   ref        = "main"
-  production = false
 }
 
 output "mansa-wifi-guests_table_name" {
