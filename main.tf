@@ -1,24 +1,25 @@
-
 terraform {
-  required_version = ">= 1.0"
-
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.0"
+      version = "~> 5.73.0"
+    }
+    vercel = {
+      source  = "vercel/vercel"
+      version = "~> 2.1.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6.3"
     }
   }
+  required_version = ">= 1.2.0"
 }
 
-# VARIABLES
 variable "aws_region" {
   type        = string
   description = "The AWS region to deploy resources (e.g., us-east-1)"
   default     = "us-east-1"
-}
-
-variable "vercel_team_id" {
-  type = string
 }
 
 variable "env" {
@@ -28,30 +29,38 @@ variable "env" {
 }
 
 variable "project_name" {
-  type        = string
-  default     = "mansa-wifi-portal"
+  type    = string
+  default = "mansa-wifi-portal"
 }
 
 variable "project_repo" {
-  type        = string
-  default     = "gkpty/omada-guest-portal"
+  type    = string
+  default = "gkpty/omada-guest-portal"
+}
+
+variable "vercel_team_id" {
+  type = string
+}
+variable "vercel_api_token" {
+  type = string
 }
 
 variable "omada_controller_url" {
-	type = string
+  type = string
 }
 
 variable "omada_portal_secret" {
-	type = string
+  type = string
 }
-
 
 provider "aws" {
-  region = var.aws_region
+  region = "us-east-1"
+}
+provider "vercel" {
+  team = var.vercel_team_id
+  api_token = var.vercel_api_token
 }
 
-
-# DYNAMO DB TABLES
 resource "aws_dynamodb_table" "mansa-wifi-guests" {
   name         = "mansa-wifi-guests"
   billing_mode = "PAY_PER_REQUEST"
@@ -66,7 +75,6 @@ resource "aws_dynamodb_table" "mansa-wifi-guests" {
     type = "S"
   }
 
-  # Key schema
   hash_key = "id"
 
   global_secondary_index {
@@ -84,6 +92,34 @@ resource "aws_dynamodb_table" "mansa-wifi-guests" {
   }
 }
 
+resource "aws_iam_user" "app_user" {
+  name = "mansa-wifi-portal"
+}
+
+data "aws_iam_policy_document" "app_policy_doc" {
+  statement {
+    sid     = "DynamoDBAccess"
+    effect  = "Allow"
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:BatchWriteItem",
+      "dynamodb:Describe*",
+      "dynamodb:List*",
+      "dynamodb:PutItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:GetItem",
+      "dynamodb:Scan",
+      "dynamodb:Query",
+      "dynamodb:UpdateItem"
+    ]
+    resources = [
+      aws_dynamodb_table.mansa-wifi-guests.arn,
+      "${aws_dynamodb_table.mansa-wifi-guests.arn}/*"
+    ]
+  }
+
+}
+
 resource "aws_iam_policy" "app_policy" {
   name        = "mansa-wifi-policy"
   description = "Policy granting DynamoDB access"
@@ -96,9 +132,9 @@ resource "aws_iam_user_policy_attachment" "app_user_attach" {
 }
 
 resource "vercel_project" "main" {
-  name            = var.project_name
-  framework       = "nextjs"
-  git_repository  = {
+  name      = var.project_name
+  framework = "nextjs"
+  git_repository = {
     type = "github"
     repo = var.project_repo
   }
@@ -107,11 +143,34 @@ resource "vercel_project" "main" {
   environment = [
     {
       target = ["preview", "production"]
-			key   = "NODE_ENV"
-      value = "production"
+      key    = "NODE_ENV"
+      value  = "production"
     },
-
-    
+    {
+      target = ["preview", "production"]
+      key   = "OMADA_PORTAL_SECRET"
+      value = var.omada_portal_secret
+    },
+    {
+      target = ["preview", "production"]
+      key   = "OMADA_CONTROLLER_URL"
+      value = var.omada_controller_url
+    },
+    {
+      target = ["preview", "production"]
+      key   = "PROJECT_NAME"
+      value = var.project_name
+    },
+    {
+      target = ["preview", "production"]
+      key   = "PROJECT_REPO"
+      value = var.project_repo
+    },
+    {
+      target = ["preview", "production"]
+      key   = "VERCEL_TEAM_ID"
+      value = var.vercel_team_id
+    },
   ]
 }
 
@@ -121,8 +180,7 @@ resource "vercel_deployment" "main" {
   production = false
 }
 
-# Outputs
-output "warehouse_table_name" {
-  description = "Name of the warehouse DynamoDB table"
+output "mansa-wifi-guests_table_name" {
+  description = "Name of the guests DynamoDB table"
   value       = aws_dynamodb_table.mansa-wifi-guests.name
 }

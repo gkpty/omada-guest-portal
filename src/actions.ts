@@ -33,7 +33,7 @@ export async function submitForm({
   contact,
   clientMac,
   apMac,
-  redirectUrl,
+  // redirectUrl,
 }: SubmitFormData) {
   if (!name || !contact) {
     throw new Error('Missing required fields.');
@@ -73,8 +73,7 @@ export async function submitForm({
     .digest('hex');
 
   const omadaRedirect = `${OMADA_CONTROLLER_URL}?token=${token}`;
-
-  redirect("https://google.com");
+  console.log('Redirecting to:', omadaRedirect);
   // redirect(redirectUrl || omadaRedirect);
-  
+  redirect("https://google.com");
 }
