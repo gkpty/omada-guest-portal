@@ -95,6 +95,9 @@ resource "aws_dynamodb_table" "mansa-wifi-guests" {
 resource "aws_iam_user" "app_user" {
   name = "mansa-wifi-portal"
 }
+resource "aws_iam_access_key" "s3_admin_user_key" {
+  user = aws_iam_user.app_user.name
+}
 
 data "aws_iam_policy_document" "app_policy_doc" {
   statement {
@@ -170,6 +173,26 @@ resource "vercel_project" "main" {
       target = ["preview", "production"]
       key   = "VERCEL_TEAM_ID"
       value = var.vercel_team_id
+    },
+    {
+      target = ["preview", "production"]
+      key   = "AWS_REGION"
+      value = "us-east-1"
+    },
+    {
+      target = ["preview", "production"]
+      key   = "AWS_DEFAULT_REGION"
+      value = "us-east-1"
+    },
+    {
+      target = ["preview", "production"]
+      key   = "AWS_ACCESS_KEY_ID"
+      value = aws_iam_access_key.s3_admin_user_key.id
+    },
+    {
+      target = ["preview", "production"]
+      key   = "AWS_SECRET_ACCESS_KEY"
+      value = aws_iam_access_key.s3_admin_user_key.secret
     },
   ]
 }

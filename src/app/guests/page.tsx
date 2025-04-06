@@ -13,7 +13,7 @@ export default async function GuestListPage() {
     })
   );
 
-  const guests = response.Items || [];
+  const guests = response?.Items || [];
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
