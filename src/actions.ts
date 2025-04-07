@@ -10,6 +10,7 @@ const TABLE_NAME = 'mansa-wifi-guests';
 const OMADA_BASE_URL = process.env.OMADA_CONTROLLER_URL!; // e.g. https://24.144.83.81:8043/a4d3107367bfe1c7133895cd766b1333
 const OMADA_OPERATOR_USER = process.env.OMADA_OPERATOR_USER!;
 const OMADA_OPERATOR_PASS = process.env.OMADA_OPERATOR_PASS!;
+const OMADA_CONTROLLER_SSID = process.env.OMADA_CONTROLLER_SSID!; // e.g. Mansa WiFi
 const AUTH_DURATION_MS = 3600000;
 
 interface SubmitFormData {
@@ -101,7 +102,7 @@ export async function submitForm({
     body: JSON.stringify({
       clientMac,
       apMac,
-      ssidName: '', // Optional: can be passed from frontend if needed
+      ssidName: OMADA_CONTROLLER_SSID, // Optional: can be passed from frontend if needed
       radioId: '',  // Optional: can be passed from frontend if needed
       authType: 4,
       time: AUTH_DURATION_MS,
@@ -115,5 +116,5 @@ export async function submitForm({
   }
 
   // 3. Redirect to the next page (Google or custom)
-  redirect(redirectUrl || 'https://www.google.com');
+  redirect(redirectUrl || 'https://mansafurniture.com');
 }
