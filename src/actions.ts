@@ -6,7 +6,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { documentClient } from './dynamoClient';
 
 const TABLE_NAME = 'mansa-wifi-guests';
-const OMADA_CONTROLLER_URL = process.env.OMADA_CONTROLLER_URL!;
+
+const OMADA_BASE_URL = process.env.OMADA_CONTROLLER_URL!; // e.g. https://24.144.83.81:8043/a4d3107367bfe1c7133895cd766b1333
+const OMADA_OPERATOR_USER = process.env.OMADA_OPERATOR_USER!;
+const OMADA_OPERATOR_PASS = process.env.OMADA_OPERATOR_PASS!;
+const OMADA_CONTROLLER_SSID = process.env.OMADA_CONTROLLER_SSID!; // e.g. Mansa WiFi
+const AUTH_DURATION_MS = 3600000;
 
 interface SubmitFormData {
   name: string;
@@ -58,6 +63,7 @@ export async function submitForm({
     throw new Error('Invalid email or phone format.');
   }
 
+  // Save guest to DynamoDB
   await documentClient.send(
     new PutItemCommand({
       TableName: TABLE_NAME,
@@ -65,14 +71,50 @@ export async function submitForm({
     })
   );
 
-  // ✅ Build Omada token by just concatenating MACs (no colons)
-  const clientPart = clientMac.replace(/:/g, '');
-  const apPart = apMac.replace(/:/g, '');
-  const token = `${clientPart}${apPart}`;
+  // 1. Login to Omada Controller
+  const loginRes = await fetch(`${OMADA_BASE_URL}/api/v2/hotspot/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: OMADA_OPERATOR_USER,
+      password: OMADA_OPERATOR_PASS,
+    }),
+  });
 
-  // ✅ Redirect to Omada controller's /portal/auth with the token
-  const omadaRedirect = `${OMADA_CONTROLLER_URL}/portal/auth?token=${token}`;
-  console.log('Redirecting to:', omadaRedirect);
+  if (!loginRes.ok) {
+    console.error(await loginRes.text());
+    throw new Error('Failed to authenticate with Omada controller');
+  }
 
-  redirect(redirectUrl || omadaRedirect);
+  const loginData = await loginRes.json();
+  const csrfToken = loginData?.result?.token;
+  if (!csrfToken) {
+    throw new Error('Omada CSRF token not found');
+  }
+
+  // 2. Authorize client MAC
+  const authRes = await fetch(`${OMADA_BASE_URL}/api/v2/hotspot/extPortal/auth`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Csrf-Token': csrfToken,
+    },
+    body: JSON.stringify({
+      clientMac,
+      apMac,
+      ssidName: OMADA_CONTROLLER_SSID, // Optional: can be passed from frontend if needed
+      radioId: '',  // Optional: can be passed from frontend if needed
+      authType: 4,
+      time: AUTH_DURATION_MS,
+    }),
+  });
+
+  const authData = await authRes.json();
+  if (authData?.errorCode !== '0') {
+    console.error(authData);
+    throw new Error('Failed to authorize client on the WiFi network');
+  }
+
+  // 3. Redirect to the next page (Google or custom)
+  redirect(redirectUrl || 'https://mansafurniture.com');
 }
