@@ -118,6 +118,9 @@ we will be connecting all devices with Cat6 internet cables and using PoE to pow
 
 # Setup the rasberry pi
 1. Turn on your rasberry pi and pull up a new terminal window
+
+2. **set up SSH on your rasberry pi**
+
 2. install docker and docker-compose
 3. **add a restart policy on the container** `restart: unless-stopped`
 4. enable docker to start on reboot `sudo systemctl enable docker`
@@ -166,31 +169,48 @@ services:
       - ./omada-data:/opt/tplink/EAPController/data
       - ./omada-logs:/opt/tplink/EAPController/logs
     restart: unless-stopped
-  cloudflared:
-    container_name: cloudflared
-    image: cloudflare/cloudflared:latest
+  ddclient:
+    image: linuxserver/ddclient
+    container_name: ddclient
     restart: unless-stopped
-    command: tunnel run --config /etc/cloudflared/config.yml
+    network_mode: host
+    environment:
+      - TZ=America/Panama
     volumes:
-      - ./cloudflared:/etc/cloudflared
+      - ./ddclient.conf:/config/ddclient.conf
 ```
 
 5. create a directory on the root `cloudflared` inside cloudflared, create 2 files:
 - config.yml
 - omada-tunnel.json
 
-6. paste the follwoing code inside config.yml
+6. create a `ddclient.conf` file with the follwoing content
 ```
-tunnel: omada-tunnel
-credentials-file: /etc/cloudflared/omada-tunnel.json
-
-ingress:
-  - hostname: yourname.cloudflare.dev
-    service: https://localhost:8043
-  - service: http_status:404
+# ./ddclient.conf
+protocol=namecheap
+use=web, web=dynamicdns.park-your-domain.com/getip
+server=dynamicdns.park-your-domain.com
+login=yourdomain.com
+password='your-ddns-password'
+portal
 ```
 
 5. Run `docker-compose up`
+
+## Create an SSL certificate
+use lets encrypt
+
+add PEM certificate into omada settings
+
+Check logs:
+
+docker logs ddclient
+You should see something like:
+
+vbnet
+
+SUCCESS:  portal.yourdomain.com -- Updated to 123.45.67.89
+
 
 
 # Set up the Omada network
@@ -254,16 +274,15 @@ Reserved IP: e.g., 192.168.0.150
 
 ### Add dynamic DNS
 
-1. On the omada software controller, navigate to `Settings > Transmission > Dynamic DNS` and click + Add
-2. Choose TP link as DDNS provider
-3. configure as follows
-```
-Service Provider: TP-Link
-Domain Name: yourcustomname.tplinkdns.com
-Username / Email: Your TP-Link ID
-Password: TP-Link account password
-```
-4. Once it's connected successfully, You should be able to access the portal through other devices at: `https://yourcustomname.tplinkdns.com:8043`
+1. Go to your domain name provider, in this case namecheap, and search for your domain name and advanced DNS settings
+2. 
+
+
+1. On the omada software controller, navigate to `Settings > Services > Dynamic DNS` and click + Create New Dyanmic DNS Entry
+2. For service provider select NO-IP
+
+
+
 
 ### Add Protection
 - Use only HTTPS (8043), not HTTP (8088)
@@ -319,4 +338,8 @@ OMADA_OPERATOR_PASS=XXXXXXXXXXXXXXXXXXX
 5. deploy by running `./deploy.sh`
 
 
-# Put your modem in bridge mode
+## Add an SSL certificate
+
+
+
+

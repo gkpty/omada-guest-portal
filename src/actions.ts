@@ -74,6 +74,7 @@ export async function submitForm({
   );
 
   console.log('Guest saved to DynamoDB:', item);
+  
 
   // 1. Login to Omada Controller
   const loginRes = await fetch(`${OMADA_BASE_URL}/${OMADA_CONTROLLER_ID}/api/v2/hotspot/login`, {
@@ -100,7 +101,7 @@ export async function submitForm({
   }
 
   // 2. Authorize client MAC
-  const authRes = await fetch(`${OMADA_BASE_URL}/api/v2/hotspot/extPortal/auth`, {
+  const authRes = await fetch(`${OMADA_BASE_URL}/${OMADA_CONTROLLER_ID}/api/v2/hotspot/extPortal/auth`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -117,6 +118,8 @@ export async function submitForm({
   });
 
   const authData = await authRes.json();
+  console.log('Authorization response:', authData);
+
   if (authData?.errorCode !== '0') {
     console.error(authData);
     throw new Error('Failed to authorize client on the WiFi network');
