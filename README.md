@@ -175,6 +175,21 @@ services:
       - ./cloudflared:/etc/cloudflared
 ```
 
+5. create a directory on the root `cloudflared` inside cloudflared, create 2 files:
+- config.yml
+- omada-tunnel.json
+
+6. paste the follwoing code inside config.yml
+```
+tunnel: omada-tunnel
+credentials-file: /etc/cloudflared/omada-tunnel.json
+
+ingress:
+  - hostname: yourname.cloudflare.dev
+    service: https://localhost:8043
+  - service: http_status:404
+```
+
 5. Run `docker-compose up`
 
 
