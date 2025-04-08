@@ -166,9 +166,32 @@ services:
       - ./omada-data:/opt/tplink/EAPController/data
       - ./omada-logs:/opt/tplink/EAPController/logs
     restart: unless-stopped
+  cloudflared:
+    container_name: cloudflared
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run --config /etc/cloudflared/config.yml
+    volumes:
+      - ./cloudflared:/etc/cloudflared
+```
+
+5. create a directory on the root `cloudflared` inside cloudflared, create 2 files:
+- config.yml
+- omada-tunnel.json
+
+6. paste the follwoing code inside config.yml
+```
+tunnel: omada-tunnel
+credentials-file: /etc/cloudflared/omada-tunnel.json
+
+ingress:
+  - hostname: yourname.cloudflare.dev
+    service: https://localhost:8043
+  - service: http_status:404
 ```
 
 5. Run `docker-compose up`
+
 
 # Set up the Omada network
 
@@ -179,9 +202,21 @@ services:
 4. go to devices, and adopt all rechable devices
 
 
+## Make sure that the IP of the omada controller doesnt clash with other IPs (modem, raspi)
+
+change the main WAN IP address, it should be set by default to `192.168.0.1` you can change it to something like `192.168.10.1`
+
+## Enable bridge mode on your modem
+
+In my case i have an Arris TG2482A modem router and to put it in bridge mode i had to call my ISP and request this change. otherwise you can log in to your modem's admin panel, for arris modems usually `192.168.0.1:8080` login with username and password (by default the username is admin and the password is the pre-shared key on your device) and access the settings which should have a router mode or bridge mode option. In case this option is not displayed contact your ISP and request they change your modems configuration to bridge mode
+
+
 ## Make the rasberry PI publicly accesible
 
 ### Fix your rasberry PIs IP
+In the Omada software controller, navigate to the clients menu and click on your raspberrypi or PC running the software controller, then on the right panel, click on config and check the box for `Use Fixed IP Address` for the netwrok use your default network and for IP adress you can use `192.168.10.4` or some IP that wont clash with other devices. then click apply.
+
+
 1. Run this in your Raspberry Pi terminal `ip link`
 You’ll see output like this:
 
@@ -201,6 +236,8 @@ MAC: dc:a6:32:dd:ee:ff
 
 Reserved IP: e.g., 192.168.0.150
 ```
+
+
 
 ### Set up port forwarding rules
 
@@ -281,3 +318,5 @@ OMADA_OPERATOR_PASS=XXXXXXXXXXXXXXXXXXX
 4. customize: feel free to add additional for fields, modify the backend logic, etc.
 5. deploy by running `./deploy.sh`
 
+
+# Put your modem in bridge mode
