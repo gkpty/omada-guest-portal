@@ -166,6 +166,13 @@ services:
       - ./omada-data:/opt/tplink/EAPController/data
       - ./omada-logs:/opt/tplink/EAPController/logs
     restart: unless-stopped
+  cloudflared:
+    container_name: cloudflared
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run --config /etc/cloudflared/config.yml
+    volumes:
+      - ./cloudflared:/etc/cloudflared
 ```
 
 5. Run `docker-compose up`
