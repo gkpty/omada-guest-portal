@@ -80,6 +80,7 @@ export async function submitForm({
       password: OMADA_OPERATOR_PASS,
     }),
   });
+  console.log('Login response:', loginRes);
 
   if (!loginRes.ok) {
     console.error(await loginRes.text());
@@ -87,6 +88,8 @@ export async function submitForm({
   }
 
   const loginData = await loginRes.json();
+  console.log('Login data:', loginData);
+
   const csrfToken = loginData?.result?.token;
   if (!csrfToken) {
     throw new Error('Omada CSRF token not found');
