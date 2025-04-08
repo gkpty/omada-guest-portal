@@ -4,6 +4,10 @@ import { PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { redirect } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import { documentClient } from './dynamoClient';
+import axios from 'axios';
+import { wrapper } from 'axios-cookiejar-support';
+import { CookieJar } from 'tough-cookie';
+import https from 'https';
 
 const TABLE_NAME = 'mansa-wifi-guests';
 
@@ -19,6 +23,7 @@ interface SubmitFormData {
   clientMac: string;
   apMac: string;
   redirectUrl?: string;
+  ssid?: string | undefined;
 }
 
 function isEmail(value: string) {
@@ -37,6 +42,7 @@ export async function submitForm({
   clientMac,
   apMac,
   redirectUrl,
+  ssid
 }: SubmitFormData) {
   if (!name || !contact) {
     throw new Error('Missing required fields.');
@@ -101,7 +107,7 @@ export async function submitForm({
   }
 
   // 2. Authorize client MAC
-  const authRes = await fetch(`${OMADA_BASE_URL}/${OMADA_CONTROLLER_ID}/api/v2/hotspot/extPortal/auth`, {
+  /* const authRes = await fetch(`${OMADA_BASE_URL}/${OMADA_CONTROLLER_ID}/api/v2/hotspot/extPortal/auth`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -112,8 +118,9 @@ export async function submitForm({
       apMac,
       ssidName: '', // Optional: can be passed from frontend if needed
       radioId: '',  // Optional: can be passed from frontend if needed
-      authType: 4,
       time: AUTH_DURATION_MS,
+      site: 'mansa',
+      authType: 4,
     }),
   });
 
@@ -123,7 +130,51 @@ export async function submitForm({
   if (authData?.errorCode !== '0') {
     console.error(authData);
     throw new Error('Failed to authorize client on the WiFi network');
-  }
+  } */
+
+    const cookieJar = new CookieJar();
+    const client = wrapper(
+      axios.create({
+        jar: cookieJar,
+        withCredentials: true,
+        httpsAgent: new https.Agent({ rejectUnauthorized: false }), // Accept self-signed cert
+      })
+    );
+    
+    // Construct the auth payload (like $authInfo in PHP)
+    const authInfo = {
+      clientMac,
+      apMac,
+      ssidName: ssid || '', // optional
+      radioId: '', // optional
+      time: AUTH_DURATION_MS,
+      authType: 4,
+    };
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Csrf-Token': csrfToken,
+    };
+    
+    try {
+      const res = await client.post(
+        `${OMADA_BASE_URL}/${OMADA_CONTROLLER_ID}/api/v2/hotspot/extPortal/auth`,
+        authInfo,
+        { headers }
+      );
+    
+      const authResult = res.data;
+      console.log('Omada Auth Result:', authResult);
+    
+      if (authResult?.errorCode === '0') {
+        console.log('✅ Authorized successfully');
+      } else {
+        console.error('❌ Authorization failed:', authResult);
+      }
+    } catch (error) {
+      console.error(' Auth request failed', error instanceof Error ? error.message :  'Unknown error');
+    }
 
   // 3. Redirect to the next page (Google or custom)
   redirect(redirectUrl || 'https://mansafurniture.com');

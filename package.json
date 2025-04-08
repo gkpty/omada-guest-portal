@@ -12,9 +12,12 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.782.0",
     "@aws-sdk/lib-dynamodb": "^3.782.0",
+    "axios": "^1.8.4",
+    "axios-cookiejar-support": "^5.0.5",
     "next": "15.2.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tough-cookie": "^5.1.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
