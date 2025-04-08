@@ -118,6 +118,9 @@ we will be connecting all devices with Cat6 internet cables and using PoE to pow
 
 # Setup the rasberry pi
 1. Turn on your rasberry pi and pull up a new terminal window
+
+2. **set up SSH on your rasberry pi**
+
 2. install docker and docker-compose
 3. **add a restart policy on the container** `restart: unless-stopped`
 4. enable docker to start on reboot `sudo systemctl enable docker`
@@ -166,9 +169,49 @@ services:
       - ./omada-data:/opt/tplink/EAPController/data
       - ./omada-logs:/opt/tplink/EAPController/logs
     restart: unless-stopped
+  ddclient:
+    image: linuxserver/ddclient
+    container_name: ddclient
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - TZ=America/Panama
+    volumes:
+      - ./ddclient.conf:/config/ddclient.conf
+```
+
+5. create a directory on the root `cloudflared` inside cloudflared, create 2 files:
+- config.yml
+- omada-tunnel.json
+
+6. create a `ddclient.conf` file with the follwoing content
+```
+# ./ddclient.conf
+protocol=namecheap
+use=web, web=dynamicdns.park-your-domain.com/getip
+server=dynamicdns.park-your-domain.com
+login=yourdomain.com
+password='your-ddns-password'
+portal
 ```
 
 5. Run `docker-compose up`
+
+## Create an SSL certificate
+use lets encrypt
+
+add PEM certificate into omada settings
+
+Check logs:
+
+docker logs ddclient
+You should see something like:
+
+vbnet
+
+SUCCESS:  portal.yourdomain.com -- Updated to 123.45.67.89
+
+
 
 # Set up the Omada network
 
@@ -179,9 +222,21 @@ services:
 4. go to devices, and adopt all rechable devices
 
 
+## Make sure that the IP of the omada controller doesnt clash with other IPs (modem, raspi)
+
+change the main WAN IP address, it should be set by default to `192.168.0.1` you can change it to something like `192.168.10.1`
+
+## Enable bridge mode on your modem
+
+In my case i have an Arris TG2482A modem router and to put it in bridge mode i had to call my ISP and request this change. otherwise you can log in to your modem's admin panel, for arris modems usually `192.168.0.1:8080` login with username and password (by default the username is admin and the password is the pre-shared key on your device) and access the settings which should have a router mode or bridge mode option. In case this option is not displayed contact your ISP and request they change your modems configuration to bridge mode
+
+
 ## Make the rasberry PI publicly accesible
 
 ### Fix your rasberry PIs IP
+In the Omada software controller, navigate to the clients menu and click on your raspberrypi or PC running the software controller, then on the right panel, click on config and check the box for `Use Fixed IP Address` for the netwrok use your default network and for IP adress you can use `192.168.10.4` or some IP that wont clash with other devices. then click apply.
+
+
 1. Run this in your Raspberry Pi terminal `ip link`
 You’ll see output like this:
 
@@ -202,6 +257,8 @@ MAC: dc:a6:32:dd:ee:ff
 Reserved IP: e.g., 192.168.0.150
 ```
 
+
+
 ### Set up port forwarding rules
 
 1. On the omada software controller, navigate to `Transmission > NAT > Virtual Servers` and click “+ Add” (or "Create New Rule")
@@ -217,16 +274,15 @@ Reserved IP: e.g., 192.168.0.150
 
 ### Add dynamic DNS
 
-1. On the omada software controller, navigate to `Settings > Transmission > Dynamic DNS` and click + Add
-2. Choose TP link as DDNS provider
-3. configure as follows
-```
-Service Provider: TP-Link
-Domain Name: yourcustomname.tplinkdns.com
-Username / Email: Your TP-Link ID
-Password: TP-Link account password
-```
-4. Once it's connected successfully, You should be able to access the portal through other devices at: `https://yourcustomname.tplinkdns.com:8043`
+1. Go to your domain name provider, in this case namecheap, and search for your domain name and advanced DNS settings
+2. 
+
+
+1. On the omada software controller, navigate to `Settings > Services > Dynamic DNS` and click + Create New Dyanmic DNS Entry
+2. For service provider select NO-IP
+
+
+
 
 ### Add Protection
 - Use only HTTPS (8043), not HTTP (8088)
@@ -280,4 +336,10 @@ OMADA_OPERATOR_PASS=XXXXXXXXXXXXXXXXXXX
 3. test locally `npm run dev`
 4. customize: feel free to add additional for fields, modify the backend logic, etc.
 5. deploy by running `./deploy.sh`
+
+
+## Add an SSL certificate
+
+
+
 
