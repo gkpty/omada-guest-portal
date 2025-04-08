@@ -19,6 +19,7 @@ interface SubmitFormData {
   clientMac: string;
   apMac: string;
   redirectUrl?: string;
+  ssid?: string | undefined;
 }
 
 function isEmail(value: string) {
@@ -37,6 +38,7 @@ export async function submitForm({
   clientMac,
   apMac,
   redirectUrl,
+  ssid
 }: SubmitFormData) {
   if (!name || !contact) {
     throw new Error('Missing required fields.');
@@ -102,7 +104,7 @@ export async function submitForm({
     body: JSON.stringify({
       clientMac,
       apMac,
-      ssidName: OMADA_CONTROLLER_SSID, // Optional: can be passed from frontend if needed
+      ssidName: ssid || '', // Optional: can be passed from frontend if needed
       radioId: '',  // Optional: can be passed from frontend if needed
       authType: 4,
       time: AUTH_DURATION_MS,
