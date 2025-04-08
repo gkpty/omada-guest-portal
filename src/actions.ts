@@ -10,7 +10,7 @@ const TABLE_NAME = 'mansa-wifi-guests';
 const OMADA_BASE_URL = process.env.OMADA_CONTROLLER_URL!; // e.g. https://24.144.83.81:8043/a4d3107367bfe1c7133895cd766b1333
 const OMADA_OPERATOR_USER = process.env.OMADA_OPERATOR_USER!;
 const OMADA_OPERATOR_PASS = process.env.OMADA_OPERATOR_PASS!;
-const OMADA_CONTROLLER_SSID = process.env.OMADA_CONTROLLER_SSID!; // e.g. Mansa WiFi
+const OMADA_CONTROLLER_ID = process.env.OMADA_CONTROLLER_ID!;
 const AUTH_DURATION_MS = 3600000;
 
 interface SubmitFormData {
@@ -42,6 +42,8 @@ export async function submitForm({
     throw new Error('Missing required fields.');
   }
 
+  console.log('Form data:', { name, contact, clientMac, apMac, redirectUrl });
+
   const id = uuidv4();
   const timestamp = new Date().toISOString();
 
@@ -71,8 +73,10 @@ export async function submitForm({
     })
   );
 
+  console.log('Guest saved to DynamoDB:', item);
+
   // 1. Login to Omada Controller
-  const loginRes = await fetch(`${OMADA_BASE_URL}/api/v2/hotspot/login`, {
+  const loginRes = await fetch(`${OMADA_BASE_URL}/${OMADA_CONTROLLER_ID}/api/v2/hotspot/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -105,7 +109,7 @@ export async function submitForm({
     body: JSON.stringify({
       clientMac,
       apMac,
-      ssidName: OMADA_CONTROLLER_SSID, // Optional: can be passed from frontend if needed
+      ssidName: '', // Optional: can be passed from frontend if needed
       radioId: '',  // Optional: can be passed from frontend if needed
       authType: 4,
       time: AUTH_DURATION_MS,
