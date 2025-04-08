@@ -9,12 +9,16 @@ export default function PortalForm({
     clientMac, 
     apMac, 
     redirectUrl, 
-    ssid
+    ssidName,
+    radioId,
+    site
 }: {
     clientMac: string, 
     apMac: string, 
     redirectUrl: string,
-    ssid: string | undefined,
+    ssidName?: string | undefined,
+    radioId?: string | undefined,
+    site?: string | undefined
 }) {
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
@@ -33,7 +37,16 @@ export default function PortalForm({
     setError('');
 
     try {
-      await submitForm({ name, contact, clientMac, apMac, redirectUrl, ssid });
+      await submitForm({ 
+        name, 
+        contact, 
+        clientMac, 
+        apMac, 
+        redirectUrl, 
+        ssidName,
+        radioId,
+        site 
+    });
     } catch (err) {
       setError((err instanceof Error ? err.message : 'An error occurred. Please try again.'));
       setLoading(false);

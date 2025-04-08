@@ -16,7 +16,7 @@ const OMADA_BASE_URL = process.env.OMADA_CONTROLLER_URL!; // e.g. https://24.144
 const OMADA_OPERATOR_USER = process.env.OMADA_OPERATOR_USER!;
 const OMADA_OPERATOR_PASS = process.env.OMADA_OPERATOR_PASS!;
 const OMADA_CONTROLLER_ID = process.env.OMADA_CONTROLLER_ID!;
-const OMADA_SITE_NAME = 'mansa';
+//const OMADA_SITE_NAME = 'mansa';
 const AUTH_DURATION_MS = 3600000;
 
 interface SubmitFormData {
@@ -25,7 +25,9 @@ interface SubmitFormData {
     clientMac: string;
     apMac: string;
     redirectUrl?: string;
-    ssid?: string | undefined;
+    ssidName?: string | undefined;
+    radioId?: string | undefined;
+    site?: string | undefined;
 }
 
 function isEmail(value: string) {
@@ -44,13 +46,24 @@ export async function submitForm({
     clientMac,
     apMac,
     redirectUrl,
-    ssid
+    ssidName,
+    radioId,
+    site
 }: SubmitFormData) {
     if (!name || !contact) {
         throw new Error('Missing required fields.');
     }
 
-    console.log('Form data:', { name, contact, clientMac, apMac, redirectUrl });
+    console.log('Form data:', { 
+        name, 
+        contact, 
+        clientMac, 
+        apMac, 
+        redirectUrl, 
+        ssidName,
+        radioId,
+        site
+    });
 
     const id = uuidv4();
     const timestamp = new Date().toISOString();
@@ -112,10 +125,9 @@ export async function submitForm({
         {
             clientMac,
             apMac,
-            ssidName: ssid || '',
-            radioId: '',
+            ssidName,
+            radioId: radioId || '',
             time: AUTH_DURATION_MS,
-            site: OMADA_SITE_NAME,
             authType: 4,
         },
         {
