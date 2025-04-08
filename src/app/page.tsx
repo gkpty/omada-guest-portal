@@ -12,7 +12,9 @@ export default async function Page({
         clientMac={sParams?.clientMac || ''}
         apMac={sParams?.apMac || ''}
         redirectUrl={sParams?.redirectUrl || ''}
-        ssid={sParams?.ssid as string | undefined}
+        ssidName={sParams?.ssidName as string | undefined}
+        radioId={sParams?.radioId as string | undefined}
+        site={sParams?.site as string | undefined}
       />
     </>
   );
